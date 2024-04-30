@@ -4,8 +4,8 @@
 ### Estudiantes:
 
 ##### - Domingo, Francisco
-
 ##### - Valeri, Lara
+##### - Marzol, Adriano
 
 ### **Aclaraciones sobre el funcionamiento:**
 
