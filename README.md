@@ -11,7 +11,7 @@
 
 Para usar pdf2image (necesaria para el ejercicio 2) en Visual Studio Code es necesario instalar **Anaconda**
 Ponerlo como intérprete en Visual Studio Code
-Ejecitar el comando: conda install -c conda-forge poppler
+Ejecutar el comando: conda install -c conda-forge poppler
 
 Además, para usar el OCR en Visual Studio Code es necesario realizar los siguientes pasos:
 
@@ -20,3 +20,5 @@ Además, para usar el OCR en Visual Studio Code es necesario realizar los siguie
    - pip install Pillow
    - pip install pytesseract
 3. Se deben importar ciertas librerias, para el funcionamiento, pero las mismas ya se encuentran en el código.
+
+También se deja el Item donde se usa el OCR ejecutado en un collab, en caso de no querer instalar el OCR en su computadora.
