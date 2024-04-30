@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from PIL import Image
 import pytesseract
@@ -21,6 +22,11 @@ img.shape
 img = cv2.imread(f'multiple_choice_1.png',cv2.IMREAD_GRAYSCALE)
 img.shape
 
+
+
+
+
+
 # ITEM A
 # Usamos la gráfica para delimitar la zona de las preguntas
 #plt.figure(), plt.imshow(img, cmap='gray'), plt.show(block=False)
@@ -28,8 +34,12 @@ img.shape
 
 index_respuestas = {"y1":140, "y2":1038}
 img_respuestas = img[index_respuestas["y1"]:index_respuestas["y2"]]
+# Estos arreglos los hacemos porque no podíamos identificar bien las "A" por columna
+img_respuestas = np.where(img_respuestas > 49, 255, img_respuestas)
+img_respuestas = np.where(img_respuestas < 50, 0, img_respuestas)
 #plt.figure(), plt.imshow(img_respuestas, cmap='gray'), plt.show(block=False)
 #plt.show()
+
 
 print(f"Tamaño de imagen donde están las respuestas: {img_respuestas.shape}")
 
@@ -66,14 +76,18 @@ for ir, idxs in enumerate(r_idxs):
     renglones.append({
         "ir": ir+1,
         "cord": idxs,
+        "punto_medio":idxs[0] + int(abs(idxs[0]-idxs[1])/2),
         "img": img_respuestas[idxs[0]:idxs[1], :]
     })
 
 # Exploramos el dato y lo visualizamos.
-#print(renglones[24])
+#print(renglones[0])
 #plt.figure(), plt.imshow(renglones[24]["img"], cmap='gray'), plt.show()
 
 
+
+
+# COLUMNAS
 # Busquemos ahora inicio y fin de cada "columna" (número de pregunta, punto, A, B, C, D y E)
 
 letras = []
@@ -84,10 +98,6 @@ for ir, renglon in enumerate(renglones):
     # Analizo columnas del renglón 
     ren_col_zeros = renglon_zeros.any(axis=0)
     ren_col_zeros_idxs = np.argwhere(renglon_zeros.any(axis=0))
-    # Visualizo
-    xc = np.arange(renglon_zeros.shape[1])
-    yc = ren_col_zeros*(renglon_zeros.shape[0]-1)
-    plt.figure(), plt.imshow(renglon_zeros, cmap='gray'), plt.plot(xc, yc, c='b'), plt.title(f"Renglón {ir+1}"), plt.show()        
         
     # Encontramos inicio y final de cada letra
     x = np.diff(ren_col_zeros)
@@ -105,8 +115,155 @@ for ir, renglon in enumerate(renglones):
             "irl":irl+1,
             "il": il,
             "cord": [renglon["cord"][0], idxs[0], renglon["cord"][1], idxs[1]],
+            "punto_medio":idxs[0] + int(abs(idxs[0]-idxs[1])/2),
             "img": renglon["img"][:, idxs[0]:idxs[1]]
         })
+
+def letra_seleccionada(img):
+    total_pixeles = img.size
+    pixeles_cero = np.count_nonzero(img == 0)
+    
+    # Calcular el porcentaje de píxeles iguales a cero
+    porcentaje_cero = (pixeles_cero / total_pixeles) * 100
+    if porcentaje_cero >= 15:
+        return False
+    else:
+        return True
+
+# Nos quedamos con todas las "letras" que tienen anchura mayor que 18 (en general tienen 20 píxeles de ancho)
+# Y decidimos si está seleccionada (True) o no (False) según qué porcentaje tiene de píxeles negros.
+letras_ok = []
+for i in letras:
+    if i["cord"][3]-i["cord"][1]>17:
+        letras_ok.append(i)
+        i["seleccionada"] = letra_seleccionada(i["img"])
+        #print(i["cord"])
+        #print(i["seleccionada"])
+
+"""
+# Visualización
+from matplotlib.patches import Rectangle        # Matplotlib posee un módulo para dibujar rectángulos (https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Rectangle.html)
+plt.figure(), plt.imshow(img_respuestas, cmap='gray')
+for il, letra in enumerate(letras_ok):
+    yi = letra["cord"][0]                       # Rectangle() toma como entrada
+    xi = letra["cord"][1]                       # las coordenadas (x,y) de la esquina superior izquierda, 
+    W = letra["cord"][2] -letra["cord"][0]      # el ancho y el alto.
+    H = letra["cord"][3] -letra["cord"][1]      #
+    rect = Rectangle((xi,yi), H, W, linewidth=1, edgecolor='r', facecolor='none')    # Creamos el objeto rectángulo.
+    ax = plt.gca()          # Obtengo el identificador de los ejes de la figura (handle)...
+    ax.add_patch(rect)      # ... Agrego el objeto (patch) a los ejes.
+plt.show()
+"""
+
+# Calculamos dónde empiezan las "A"
+
+min = letras_ok[0]["cord"][1]
+for letra in letras_ok:
+    if min>letra["cord"][1]:
+        min = letra["cord"][1]
+
+# Y los puntos medios de las columnas
+punto_medio_A = min+9
+punto_medio_B = punto_medio_A+29
+punto_medio_C = punto_medio_B+29
+punto_medio_D = punto_medio_C+29
+punto_medio_E = punto_medio_D+29
+
+
+
+"""
+# Visualización con identificación de columnas
+from matplotlib.patches import Rectangle        # Matplotlib posee un módulo para dibujar rectángulos (https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Rectangle.html)
+plt.figure(), plt.imshow(img_respuestas, cmap='gray')
+for il, letra in enumerate(letras_ok):
+    yi = letra["cord"][0]                       # Rectangle() toma como entrada
+    xi = letra["cord"][1]                       # las coordenadas (x,y) de la esquina superior izquierda, 
+    W = letra["cord"][2] -letra["cord"][0]      # el ancho y el alto.
+    H = letra["cord"][3] -letra["cord"][1]      #
+    rect = Rectangle((xi,yi), H, W, linewidth=1, edgecolor='r', facecolor='none')    # Creamos el objeto rectángulo.
+    ax = plt.gca()          # Obtengo el identificador de los ejes de la figura (handle)...
+    ax.add_patch(rect)      # ... Agrego el objeto (patch) a los ejes.
+
+plt.axvline(x=punto_medio_A, color='b', linestyle='--')
+plt.axvline(x=punto_medio_B, color='b', linestyle='--')
+plt.axvline(x=punto_medio_C, color='b', linestyle='--')
+plt.axvline(x=punto_medio_D, color='b', linestyle='--')
+plt.axvline(x=punto_medio_E, color='b', linestyle='--')
+plt.show()
+"""
+
+for r in renglones:
+    respuestas = {}
+    for i in letras_ok:
+        if i["cord"][0]<r["punto_medio"] and i["cord"][2]>r["punto_medio"]:
+            if i["cord"][1]<punto_medio_A and i["cord"][3]>punto_medio_A:
+                respuestas["A"] = i["seleccionada"]
+            elif i["cord"][1]<punto_medio_B and i["cord"][3]>punto_medio_B:
+                respuestas["B"] = i["seleccionada"]
+            elif i["cord"][1]<punto_medio_C and i["cord"][3]>punto_medio_C:
+                respuestas["C"] = i["seleccionada"]
+            elif i["cord"][1]<punto_medio_D and i["cord"][3]>punto_medio_D:
+                respuestas["D"] = i["seleccionada"]
+            elif i["cord"][1]<punto_medio_E and i["cord"][3]>punto_medio_E:
+                respuestas["E"] = i["seleccionada"]
+    
+    LETRAS = ["A", "B", "C", "D", "E"]
+    for l in LETRAS:
+        if l not in respuestas:
+            respuestas[l] = True
+    r["respuestas"]=respuestas
+
+
+
+"""
+# Visualización
+from matplotlib.patches import Rectangle        # Matplotlib posee un módulo para dibujar rectángulos (https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Rectangle.html)
+plt.figure(), plt.imshow(img_respuestas, cmap='gray')
+for il, letra in enumerate(letras_ok):
+    yi = letra["cord"][0]                       # Rectangle() toma como entrada
+    xi = letra["cord"][1]                       # las coordenadas (x,y) de la esquina superior izquierda, 
+    W = letra["cord"][2] -letra["cord"][0]      # el ancho y el alto.
+    H = letra["cord"][3] -letra["cord"][1]      #
+    rect = Rectangle((xi,yi), H, W, linewidth=1, edgecolor='r', facecolor='none')    # Creamos el objeto rectángulo.
+    ax = plt.gca()          # Obtengo el identificador de los ejes de la figura (handle)...
+    ax.add_patch(rect)      # ... Agrego el objeto (patch) a los ejes.
+plt.show()
+
+"""
+
+# Vemos cómo quedaron nuestros datos:
+for i in range(10):
+    print(renglones[i]["respuestas"])
+
+def count_false(dic):
+    sum = 0
+    for i in dic.values():
+        if i is False:
+            sum = sum+1
+    return sum
+
+respuestas_correctas = ["A", "A", "B", "A", "D", "B", "B", "C", "B", "A", "D", "A", "C", "C", "D", "B", "A", "C", "C", "D", "B", "A", "C", "C", "C"]
+cantidad_de_correctas = 0
+
+# Ahora sí, respondemos al enunciado:
+for i in range(25):
+    if renglones[i]["respuestas"][respuestas_correctas[i]]==True and count_false(renglones[i]["respuestas"])==4:
+        print(f"Pregunta {renglones[i]["ir"]}: OK")
+        cantidad_de_correctas = cantidad_de_correctas+1
+    else:
+        print(f"Pregunta {renglones[i]["ir"]}: MAL")
+
+print(f"Cantidad de respuestas correctas: {cantidad_de_correctas}")
+if cantidad_de_correctas>=20:
+    print("Examen aprobado.")
+else:
+    print("Examen desaprobado.")
+
+
+
+
+
+
 
 
 
@@ -202,3 +359,54 @@ else:
     print(f"Date ({date}): MAL")
 
 	"""
+
+
+
+
+
+
+# ITEM C
+# Se hace ejecutando el input del principio sobre el item A.
+
+
+
+
+
+"""
+
+# ITEM D 
+from TP_2_as_function import corregir
+from PIL import Image, ImageDraw, ImageFont
+
+lista = []
+for i in range(1,6):
+    img = cv2.imread(f'multiple_choice_{i}.png',cv2.IMREAD_GRAYSCALE)
+    entry = corregir(img)
+    lista.append(entry)
+
+df = pd.DataFrame(lista)    
+
+# Crear una imagen vacía
+width, height = 600, 300
+img = Image.new('RGB', (width, height), color='white')
+draw = ImageDraw.Draw(img)
+
+# Escribir el DataFrame en la imagen
+font = ImageFont.truetype("arial.ttf", 20)
+text = df.to_string(index=False)  # No incluir el índice en la tabla
+lines = text.split('\n')
+y_pos = 10
+
+
+for line in lines:
+    if 'No' in line:  # Colorear las filas con 'No' en rojo
+        draw.text((10, y_pos), line, fill='red', font=font)
+    else:
+        draw.text((10, y_pos), line, fill='black', font=font)
+    y_pos += 20
+
+# Guardar la imagen como un archivo PNG
+img.save('tabla.png')
+
+
+"""
