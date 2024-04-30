@@ -28,6 +28,8 @@ img_respuestas = img[index_respuestas["y1"]:index_respuestas["y2"]]
 plt.figure(), plt.imshow(img_respuestas, cmap='gray'), plt.show(block=False)
 plt.show()
 
+
+
 """
 # ITEM B (NOS PUSIMOS CREATIVOS)
 # Exploración de imágenes
