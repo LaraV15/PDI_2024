@@ -41,13 +41,9 @@ def local_histogram_equalization(image, window_size):
     # Iterar sobre la imagen con el tamaño de la ventana especificado
     for y in range(0, height - window_size[0] + 1, window_size[0]):
         for x in range(0, width - window_size[1] + 1, window_size[1]):
-            # Obtener la región de interés (ROI)
+            # Obtener la región de interés
             roi = gray_image[y:y+window_size[0], x:x+window_size[1]]
-
-            # Ecualizar el histograma de la ROI
             equalized_roi = cv2.equalizeHist(roi)
-
-            # Asignar la ROI ecualizada a la imagen original
             gray_image[y:y+window_size[0], x:x+window_size[1]] = equalized_roi
 
     return gray_image
@@ -65,7 +61,3 @@ for tv in tamanos_ventana:
     cv2.imshow(f'Imagen con ventana {tv}', image_eq)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
-    
-# ==========================================
-# PROBLEMA 2 - Corrección de multiple choice
-# ==========================================
