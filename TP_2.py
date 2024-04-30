@@ -9,14 +9,17 @@ pytesseract.pytesseract.tesseract_cmd = "C:\\Program Files\\Tesseract-OCR\\tesse
 # PROBLEMA 2 - Corrección de multiple choice
 # ==========================================
 
-
+"""
 n = int(input("Ingrese un número del 1 al 5: "))
 while n not in range(1,6):
 	n = int(input("Error: ingrese un número del 1 al 5: "))
-img = cv2.imread(f'multiple_choice_{n}.png',cv2.IMREAD_GRAYSCALE) 
+img = cv2.imread(f'multiple_choice_{n}.png',cv2.IMREAD_GRAYSCALE)
 img.shape
+"""
 
 
+img = cv2.imread(f'multiple_choice_1.png',cv2.IMREAD_GRAYSCALE)
+img.shape
 
 # ITEM A
 # Usamos la gráfica para delimitar la zona de las preguntas
@@ -25,8 +28,85 @@ img.shape
 
 index_respuestas = {"y1":140, "y2":1038}
 img_respuestas = img[index_respuestas["y1"]:index_respuestas["y2"]]
-plt.figure(), plt.imshow(img_respuestas, cmap='gray'), plt.show(block=False)
-plt.show()
+#plt.figure(), plt.imshow(img_respuestas, cmap='gray'), plt.show(block=False)
+#plt.show()
+
+print(f"Tamaño de imagen donde están las respuestas: {img_respuestas.shape}")
+
+
+black = 0
+img_zeros = img_respuestas==black
+                           
+img_row_zeros = img_zeros.any(axis=1)
+img_row_zeros_idxs = np.argwhere(img_zeros.any(axis=1))
+
+#plt.figure(), plt.imshow(escrito, cmap='gray'), plt.show()
+#plt.show()
+
+x = np.diff(img_row_zeros)          
+renglones_indxs = np.argwhere(x)
+print(f"Cantidad de renglones: {int(len(renglones_indxs)/2)}")
+
+
+# Visualización
+"""
+ii = np.arange(0,len(renglones_indxs),2)    # 0 2 4 ... X --> X es el último nro par antes de len(renglones_indxs)
+renglones_indxs[ii]+=1
+
+xri = np.zeros(img_respuestas.shape[0])
+xri[renglones_indxs] = (img_respuestas.shape[1]-1)
+yri = np.arange(img_respuestas.shape[0])            
+plt.figure(), plt.imshow(img_respuestas, cmap='gray'), plt.plot(xri, yri, 'r'), plt.title("Renglones - Inicio y Fin"), plt.show()
+"""
+
+# Genero estructura de datos para guardar datos de renglones
+r_idxs = np.reshape(renglones_indxs, (-1,2))
+renglones = []
+for ir, idxs in enumerate(r_idxs):
+    renglones.append({
+        "ir": ir+1,
+        "cord": idxs,
+        "img": img_respuestas[idxs[0]:idxs[1], :]
+    })
+
+# Exploramos el dato y lo visualizamos.
+#print(renglones[24])
+#plt.figure(), plt.imshow(renglones[24]["img"], cmap='gray'), plt.show()
+
+
+# Busquemos ahora inicio y fin de cada "columna" (número de pregunta, punto, A, B, C, D y E)
+
+letras = []
+il = -1
+for ir, renglon in enumerate(renglones):
+    renglon_zeros = renglon["img"]==0
+
+    # Analizo columnas del renglón 
+    ren_col_zeros = renglon_zeros.any(axis=0)
+    ren_col_zeros_idxs = np.argwhere(renglon_zeros.any(axis=0))
+    # Visualizo
+    xc = np.arange(renglon_zeros.shape[1])
+    yc = ren_col_zeros*(renglon_zeros.shape[0]-1)
+    plt.figure(), plt.imshow(renglon_zeros, cmap='gray'), plt.plot(xc, yc, c='b'), plt.title(f"Renglón {ir+1}"), plt.show()        
+        
+    # Encontramos inicio y final de cada letra
+    x = np.diff(ren_col_zeros)
+    letras_indxs = np.argwhere(x) 
+    # *** Modifico índices ***********
+    ii = np.arange(0,len(letras_indxs),2)
+    letras_indxs[ii]+=1
+
+    letras_indxs = letras_indxs.reshape((-1,2))
+    
+    for irl, idxs in enumerate(letras_indxs):
+        il+=1
+        letras.append({
+            "ir":ir+1,
+            "irl":irl+1,
+            "il": il,
+            "cord": [renglon["cord"][0], idxs[0], renglon["cord"][1], idxs[1]],
+            "img": renglon["img"][:, idxs[0]:idxs[1]]
+        })
 
 
 
