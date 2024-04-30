@@ -9,7 +9,7 @@
 
 ### **Aclaraciones sobre el funcionamiento:**
 
-Para usar pdf2image en Visual Studio Code es necesario instalar **Anaconda**
+Para usar pdf2image (necesaria para el ejercicio 2) en Visual Studio Code es necesario instalar **Anaconda**
 Ponerlo como intérprete en Visual Studio Code
 Ejecitar el comando: conda install -c conda-forge poppler
 
