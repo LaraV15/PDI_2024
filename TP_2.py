@@ -427,18 +427,37 @@ img.save('tabla.png')
 #plt.figure(), plt.imshow(img, cmap='gray'), plt.show(block=False)
 #plt.show()
 
+import cv2
+
 # Función para contar componentes conectadas y sus separaciones horizontales
 def count_chars_and_spaces(img):
-    _, thresh = cv2.threshold(img, 128, 255, cv2.THRESH_BINARY_INV)
+    _, thresh = cv2.threshold(img, 160, 255, cv2.THRESH_BINARY_INV)
     num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(thresh, connectivity=8)
 
-    # Obtener las posiciones horizontales de los caracteres
-    positions = [(stats[i, cv2.CC_STAT_LEFT], stats[i, cv2.CC_STAT_TOP], stats[i, cv2.CC_STAT_WIDTH], stats[i, cv2.CC_STAT_HEIGHT])
-                 for i in range(1, num_labels)]
+    # Obtener las posiciones horizontales y centroids de los caracteres con área mínima 40
+    positions = []
+    centroids_filtered = []
+    for i in range(1, num_labels):
+        x, y, w, h, area = stats[i]
+        if area >= 3:
+            positions.append((x, y, w, h))
+            centroids_filtered.append(centroids[i])
+
+    # Dibujar las cajas alrededor de los caracteres detectados
+    for (x, y, w, h) in positions:
+        cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 2)
     
-    # Contar caracteres y espacios
+    # Contar caracteres y espacios basados en la distancia entre centroides
     num_chars = len(positions)
-    num_spaces = sum(1 for i in range(1, len(positions)) if positions[i][0] - (positions[i-1][0] + positions[i-1][2]) > 19)
+    num_spaces = 0
+    
+    # Calcular las distancias entre centroides y posiciones
+    for i in range(1, len(centroids_filtered)):
+        distancia1 = centroids_filtered[i][0] - centroids_filtered[i-1][0]
+        distancia2 = positions[i][0] - (positions[i-1][0] + positions[i-1][2])
+        promedio = (distancia1 + distancia2) / 2
+        if promedio > 21:
+            num_spaces += 1
     
     return num_chars, num_spaces, positions
 
@@ -456,46 +475,62 @@ def verificar_condiciones(img_datos):
     num_chars_name, num_spaces_name, _ = count_chars_and_spaces(img_name)
     if num_chars_name <= 25 and num_spaces_name == 1:
         resultados["name"] = True
+        print("Name: OK")
+    else:
+        print("Name: MAL")
+        print(f"El nombre tiene {num_chars_name} caracter(es) y {num_spaces_name} espacio(s).")
 
     # Verificación de id
     img_id = img_datos[1]
     num_chars_id, num_spaces_id, positions_id = count_chars_and_spaces(img_id)
     if num_chars_id == 8 and num_spaces_id == 0:
         resultados["id"] = True
+        print("Id: OK")
+    else:
+        print("Id: MAL")
+        print(f"El id tiene {num_chars_id} caracter(es) y {num_spaces_id} espacio(s).")
 
     # Verificación de code
     img_code = img_datos[2]
     num_chars_code, num_spaces_code, _ = count_chars_and_spaces(img_code)
     if num_chars_code == 1 and num_spaces_code == 0:
         resultados["code"] = True
+        print("Code: OK")
+    else:
+        print("Code: MAL")
+        print(f"El code tiene {num_chars_code} caracter(es) y {num_spaces_code} espacio(s).")
 
     # Verificación de date
     img_date = img_datos[3]
     num_chars_date, num_spaces_date, _ = count_chars_and_spaces(img_date)
     if num_chars_date == 8 and num_spaces_date == 0:
         resultados["date"] = True
+        print("Date: OK")
+    else:
+        print("Date: MAL")
+        print(f"La fecha tiene {num_chars_date} caracter(es) y {num_spaces_date} espacio(s).")
 
     return resultados, positions_id
 
-
-
-for i in range(1,6):
-    img = cv2.imread(f'multiple_choice_{i}.png',cv2.IMREAD_GRAYSCALE)
+# Segmentación y verificación de imágenes
+for i in range(1, 6):
+    img = cv2.imread(f'multiple_choice_{i}.png', cv2.IMREAD_GRAYSCALE)
     
     # Indexamos el renglón, y el resto de datos en ese renglón
-    index_renglon = {"y1":109, "y2":129}
-    index_name = {"x1":98, "x2":280}
-    index_id = {"x1":332, "x2":430}
-    index_code = {"x1":490, "x2":565}
-    index_date = {"x1":650, "x2":767}
+    index_renglon = {"y1": 109, "y2": 129}
+    index_name = {"x1": 98, "x2": 280}
+    index_id = {"x1": 332, "x2": 430}
+    index_code = {"x1": 490, "x2": 565}
+    index_date = {"x1": 650, "x2": 767}
 
-    img_name = img[index_renglon["y1"]:index_renglon["y2"],index_name["x1"]:index_name["x2"]]
-    img_id = img[index_renglon["y1"]:index_renglon["y2"],index_id["x1"]:index_id["x2"]]
-    img_code = img[index_renglon["y1"]:index_renglon["y2"],index_code["x1"]:index_code["x2"]]
-    img_date = img[index_renglon["y1"]:index_renglon["y2"],index_date["x1"]:index_date["x2"]]
+    img_name = img[index_renglon["y1"]:index_renglon["y2"], index_name["x1"]:index_name["x2"]]
+    img_id = img[index_renglon["y1"]:index_renglon["y2"], index_id["x1"]:index_id["x2"]]
+    img_code = img[index_renglon["y1"]:index_renglon["y2"], index_code["x1"]:index_code["x2"]]
+    img_date = img[index_renglon["y1"]:index_renglon["y2"], index_date["x1"]:index_date["x2"]]
 
-    img_datos = [img_name,img_id,img_code,img_date]
+    img_datos = [img_name, img_id, img_code, img_date]
     
+    print(f"Chequeo de imagen {i}: ")
     # Verificamos las condiciones
     resultados, positions_id = verificar_condiciones(img_datos)
-    print(resultados)
+    print("#####################################")
